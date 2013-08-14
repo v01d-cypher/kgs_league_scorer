@@ -81,7 +81,7 @@ def get_guild_members(guild):
     return members
 
 
-print('Start : {}\n\n'.format(datetime.datatime.now()))
+print('Start : {}\n\n'.format(datetime.datetime.now()))
 games_processed = load_games_processed()
 
 guild_members = guild_data.get_guild_members()
