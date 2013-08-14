@@ -81,6 +81,7 @@ def get_guild_members(guild):
     return members
 
 
+print('Start : {}\n\n'.format(datetime.datatime.now()))
 games_processed = load_games_processed()
 
 guild_members = guild_data.get_guild_members()
@@ -166,6 +167,7 @@ valid_games = []
 same_guild_games = []
 
 for game in games:
+    print('Retrieving: {}'.format(game['Link']))
     sgf_data = str(urllib.request.urlopen(game['Link']).read()).lower()
     if sgf_data.find('duelgo') > -1 or sgf_data.find('duel go') > -1:
         if game['WinnerGuild'] != game['OpponentGuild']:
@@ -173,9 +175,13 @@ for game in games:
         else:
             same_guild_games.append(game)
 
-print('Sending email...')
-send_email.process_email(
-    {
-        'games': valid_games,
-        'same_guild': same_guild_games
-    })
+print('Valid Games: {}'.format('\n'.join(valid_games)))
+print('Same Guild: {}'.format('\n'.join(same_guild_games)))
+
+if valid_games or same_guild_games:
+    print('Sending email...')
+    send_email.process_email(
+        {
+            'games': valid_games,
+            'same_guild': same_guild_games
+        })
