@@ -1,3 +1,4 @@
+import datetime
 import smtplib
 from email.mime.text import MIMEText
 
@@ -33,7 +34,7 @@ def connect():
 def send(data):
     TO = 'to@somewhere.com'
     FROM = 'username@gmail.com'
-    SUBJECT = 'KGS - DuelGo Results'
+    SUBJECT = 'KGS - DuelGo Results - {}'.format(datetime.datetime.now().strftime('%m/%d/%Y %I:%M %p'))
 
     msg = MIMEText('\n'.join(data), 'html')
     msg['To'] = TO
