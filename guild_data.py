@@ -48,13 +48,14 @@ def get_guild_members():
             tds = member.find_all('td')
 
             username = tds[0].text.strip()
-            guild_members[username] = {
-                'Guild': name
-            }
-            print('\t{}'.format(username))
+            if username:
+                guild_members[username] = {
+                    'Guild': name
+                }
+                print('\t{}'.format(username))
 
-            for index, td in enumerate(tds[1:5]):
-                guild_members[username][member_data_items[index]] = td.text.strip()
+                for index, td in enumerate(tds[1:5]):
+                    guild_members[username][member_data_items[index]] = td.text.strip()
 
     return guild_members
 
