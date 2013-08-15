@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import datetime
+import pprint
 import re
 import time
 import urllib.request
@@ -90,25 +91,30 @@ for member, data in load_member_data().items():
 
 games = []
 
-for member in guild_members:
-    print('Processing: {}'.format(member))
-    time.sleep(1)
-    games_raw = urllib.request.urlopen('http://www.gokgs.com/gameArchives.jsp?user={}'.format(member))
+for index, member in enumerate(guild_members):
+    print('Query User #{}: {}'.format(index + 1, member))
+    # www.gokgs.com has a time limit between requests. Don't know how much time yet. 5 seconds seems to work for now.
+    time.sleep(5)
+    request = urllib.request.Request(
+        'http://www.gokgs.com/gameArchives.jsp?user={}'.format(member),
+        headers={'Cookie': 'timeZone="Africa/Johannesburg"'})
+    games_raw = urllib.request.urlopen(request)
     games_soup = BeautifulSoup(games_raw.read())
 
     for game in games_soup.table.find_all('tr')[1:]:
         tds = game.find_all('td')
-        # This will also work where user played no games as game_viewable will be a 'Year' from the other table
+
         game_viewable = tds[0].text
+        game_setup = tds[3].text.strip()
         game_type = tds[-2].text
 
-        if game_viewable == 'Yes' and game_type in ['Free', 'Ranked']:
+        # This will also work where user played no games as game_viewable will be a 'Year' from the other table
+        if game_viewable == 'Yes' and game_type in ['Free', 'Ranked'] and game_setup.find('19×19') > -1:
             date = datetime.datetime.strptime(tds[4].text.strip(), '%m/%d/%y %I:%M %p')
             game_link = tds[0].a.get('href')
-            game_setup = tds[3].text.strip()
 
-            # only get games played today and where the board size is 19x19, that we haven't processed yet
-            if date.date() == datetime.datetime.now().date() and game_setup.find('19×19') > -1 and game_link not in games_processed:
+            # only get games played for this date that we haven't processed yet
+            if date.date() == datetime.datetime.now().date() and game_link not in games_processed:
                 players = {
                     'W': {
                         'name': re.sub(r'(.*)\[.*', r'\1', tds[1].text).strip(),
@@ -126,57 +132,68 @@ for member in guild_members:
                 if result[0] != w_colour:
                     w_colour, o_colour = o_colour, w_colour
 
-                winner = players[w_colour]['name']
-                winnercolour = players[w_colour]['colour']
-                opponent = players[o_colour]['name']
-                opponentcolour = players[o_colour]['colour']
-
-                winner_data = get_member_data(winner)
-                opponent_data = get_member_data(opponent)
-
-                winner_data['Points'] = calc_points(winner_data['Points'], True)
-                winner_data['Tournament Win/Loss'] = calc_win_loss(winner_data['Tournament Win/Loss'], True)
-                opponent_data['Points'] = calc_points(opponent_data['Points'], True)
-                opponent_data['Tournament Win/Loss'] = calc_win_loss(opponent_data['Tournament Win/Loss'], True)
-
                 game_data = {
                     'Link': game_link,
-                    'Winner': winner,
-                    'WinnerGuild': winner_data['Guild'],
-                    'WinnerColour': winnercolour,
-                    'WinnerRank': winner_data['Rank'],
-                    'WinnerPoints': winner_data['Points'],
-                    'WinnerWinLoss': winner_data['Tournament Win/Loss'],
-                    'Opponent': opponent,
-                    'OpponentGuild': opponent_data['Guild'],
-                    'OpponentColour': opponentcolour,
-                    'OpponentRank': opponent_data['Rank'],
-                    'OpponentPoints': opponent_data['Points'],
-                    'OpponentWinLoss': opponent_data['Tournament Win/Loss'],
+                    'Winner': players[w_colour]['name'],
+                    'WinnerColour': players[w_colour]['colour'],
+                    'Opponent': players[o_colour]['name'],
+                    'OpponentColour': players[o_colour]['colour'],
                     'DatePlayed': date.date().strftime('%m/%d/%Y'),
                     'Result': result,
                 }
                 games.append(game_data)
 
                 games_processed.append(game_link)
-                save_member_data(guild_members)
                 save_games_processed(games_processed)
 
 
 valid_games = []
 same_guild_games = []
 
-for game in games:
-    print('Retrieving: {}'.format(game['Link']))
+for index, game in enumerate(games):
+    print('Retrieve Game #{}: {}'.format(index + 1, game['Link']))
+    # www.gokgs.com has a time limit between requests. Don't know how much time yet. 5 seconds seems to work for now.
+    time.sleep(5)
     sgf_data = str(urllib.request.urlopen(game['Link']).read()).lower()
     if sgf_data.find('duelgo') > -1 or sgf_data.find('duel go') > -1:
+        game['TableHeader'] = 'Game - {} vs. {}'.format(game['Winner'], game['Opponent'])
+
+        winner_data = get_member_data(game['Winner'])
+        opponent_data = get_member_data(game['Opponent'])
+
+        game['WinnerGuild'] = winner_data['Guild']
+        game['WinnerRank'] = winner_data['Rank']
+        game['OpponentGuild'] = opponent_data['Guild']
+        game['OpponentRank'] = opponent_data['Rank']
+
         if game['WinnerGuild'] != game['OpponentGuild']:
+            winner_data['Points'] = calc_points(winner_data['Points'], True)
+            winner_data['Tournament Win/Loss'] = calc_win_loss(winner_data['Tournament Win/Loss'], True)
+            opponent_data['Points'] = calc_points(opponent_data['Points'], False)
+            opponent_data['Tournament Win/Loss'] = calc_win_loss(opponent_data['Tournament Win/Loss'], False)
+
+            save_member_data(guild_members)
+
+            game['WinnerPoints'] = winner_data['Points']
+            game['WinnerWinLoss'] = winner_data['Tournament Win/Loss']
+            game['OpponentPoints'] = opponent_data['Points']
+            game['OpponentWinLoss'] = opponent_data['Tournament Win/Loss']
+
             valid_games.append(game)
         else:
+            game['WinnerPoints'] = 'N/A'
+            game['WinnerWinLoss'] = 'N/A'
+            game['OpponentPoints'] = 'N/A'
+            game['OpponentWinLoss'] = 'N/A'
+
+            game['TableHeader'] = '[!SAME GUILD NOT SCORED!] ' + game['TableHeader']
             same_guild_games.append(game)
 
-print('Valid Games: {}'.format('\n'.join(valid_games)))
-print('Same Guild: {}'.format('\n'.join(same_guild_games)))
+
+print('\nValid Games:')
+pprint.pprint(valid_games)
+print('Same Guild:')
+pprint.pprint(same_guild_games)
 
 if valid_games or same_guild_games:
     print('Sending email...')
