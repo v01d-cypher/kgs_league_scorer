@@ -11,20 +11,21 @@ logging.basicConfig(
 
 log = logging.getLogger('[Send-Mail]')
 
-def process_email(data):
+
+def process_email(games):
     table_template = open('table_template.html', 'r').read()
 
-    same_guild_html = []
-    for game in data['same_guild']:
+    valid_games_html = []
+    for game in games['valid']:
         tt = table_template
-        same_guild_html.append(tt.format(**game))
+        valid_games_html.append(tt.format(**game))
 
-    games_html = []
-    for game in data['games']:
+    same_guild_games_html = []
+    for game in games['same_guild']:
         tt = table_template
-        games_html.append(tt.format(**game))
+        same_guild_games_html.append(tt.format(**game))
 
-    send(same_guild_html + games_html)
+    send(valid_games_html + same_guild_games_html)
 
 
 def connect():

@@ -58,13 +58,16 @@ def get_guild_members():
 
             username = tds[0].text.strip()
             if username:
-                guild_members[username] = {
+                username_key = username.lower()
+                guild_members[username_key] = {
                     'Guild': name
                 }
                 log.info('\t{}'.format(username))
 
+                guild_members[username_key]['Name'] = username
+
                 for index, td in enumerate(tds[1:5]):
-                    guild_members[username][member_data_items[index]] = td.text.strip()
+                    guild_members[username_key][member_data_items[index]] = td.text.strip()
 
     return guild_members
 
