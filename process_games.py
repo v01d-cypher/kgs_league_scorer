@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import datetime
+import logging
 import pprint
 import re
 import time
@@ -9,6 +10,9 @@ import yaml
 import guild_data
 import send_email
 
+
+logging.basicConfig(filename='/var/log/duelgo.log', level=logging.INFO, datefmt='%Y%m%d %H%M', format='%(asctime)s : %(levelname)s %(name)s - %(message)s')
+log = logging.getLogger('[DuelGo]')
 
 def save_games_processed(games_processed):
     yaml.dump(games_processed, open('games_processed.yaml', 'w', encoding='UTF-8'), default_flow_style=False)
@@ -82,7 +86,7 @@ def get_guild_members(guild):
     return members
 
 
-print('Start : {}\n\n'.format(datetime.datetime.now()))
+log.info('Start processing')
 games_processed = load_games_processed()
 
 guild_members = guild_data.get_guild_members()
@@ -92,7 +96,7 @@ for member, data in load_member_data().items():
 games = []
 
 for index, member in enumerate(guild_members):
-    print('Query User #{}: {}'.format(index + 1, member))
+    log.info('Query User #{}: {}'.format(index + 1, member))
     # www.gokgs.com has a time limit between requests. Don't know how much time yet. 5 seconds seems to work for now.
     time.sleep(5)
     request = urllib.request.Request(
@@ -114,7 +118,7 @@ for index, member in enumerate(guild_members):
             game_link = tds[0].a.get('href')
 
             # only get games played for this date that we haven't processed yet
-            if date.date() == datetime.datetime.now().date() and game_link not in games_processed:
+            if date.date() == datetime.datetime.now().date() - datetime.timedelta(1) and game_link not in games_processed:
                 players = {
                     'W': {
                         'name': re.sub(r'(.*)\[.*', r'\1', tds[1].text).strip(),
@@ -151,7 +155,7 @@ valid_games = []
 same_guild_games = []
 
 for index, game in enumerate(games):
-    print('Retrieve Game #{}: {}'.format(index + 1, game['Link']))
+    log.info('Retrieve Game #{}: {}'.format(index + 1, game['Link']))
     # www.gokgs.com has a time limit between requests. Don't know how much time yet. 5 seconds seems to work for now.
     time.sleep(5)
     sgf_data = str(urllib.request.urlopen(game['Link']).read()).lower()
@@ -190,13 +194,11 @@ for index, game in enumerate(games):
             same_guild_games.append(game)
 
 
-print('\nValid Games:')
-pprint.pprint(valid_games)
-print('Same Guild:')
-pprint.pprint(same_guild_games)
+log.info('Valid Games: ' + pprint.pformat(valid_games))
+log.info('Same Guild: ' + pprint.pformat(same_guild_games))
 
 if valid_games or same_guild_games:
-    print('Sending email...')
+    log.info('Sending email...')
     send_email.process_email(
         {
             'games': valid_games,

@@ -1,7 +1,10 @@
+from bs4 import BeautifulSoup
+import logging
 import time
 import urllib.request
-from bs4 import BeautifulSoup
 
+logging.basicConfig(filename='/var/log/duelgo.log', level=logging.INFO, datefmt='%Y%m%d %H%M', format='%(asctime)s : %(levelname)s %(name)s - %(message)s')
+log = logging.getLogger('[Guild-Data]')
 
 def _get_guild_data():
     guild_names_raw = urllib.request.urlopen('http://duelgo.webs.com/guilds')
@@ -36,7 +39,7 @@ def get_guild_members():
     guild_members = {}
 
     for name, link in guild_data.items():
-        print('Guild: {}'.format(name))
+        log.info('Guild: {}'.format(name))
         #sleep else web calls appear to be too fast for site
         time.sleep(2)
 
@@ -52,7 +55,7 @@ def get_guild_members():
                 guild_members[username] = {
                     'Guild': name
                 }
-                print('\t{}'.format(username))
+                log.info('\t{}'.format(username))
 
                 for index, td in enumerate(tds[1:5]):
                     guild_members[username][member_data_items[index]] = td.text.strip()

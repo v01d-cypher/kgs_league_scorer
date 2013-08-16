@@ -1,7 +1,10 @@
 import datetime
+import logging
 import smtplib
 from email.mime.text import MIMEText
 
+logging.basicConfig(filename='/var/log/duelgo.log', level=logging.INFO, datefmt='%Y%m%d %H%M', format='%(asctime)s : %(levelname)s %(name)s - %(message)s')
+log = logging.getLogger('[Send-Mail]')
 
 def process_email(data):
     table_template = open('table_template.html', 'r').read()
@@ -45,8 +48,8 @@ def send(data):
 
     try:
         server.sendmail(FROM, [TO], msg.as_string())
-        print('\t ... sent')
+        log.info('\t ... sent')
     except:
-        print('\t ... ERROR sending')
+        log.info('\t ... ERROR sending')
 
     server.quit()
