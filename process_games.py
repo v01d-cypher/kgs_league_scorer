@@ -11,7 +11,12 @@ import guild_data
 import send_email
 
 
-logging.basicConfig(filename='/var/log/duelgo.log', level=logging.INFO, datefmt='%Y%m%d %H%M', format='%(asctime)s : %(levelname)s %(name)s - %(message)s')
+logging.basicConfig(
+    filename='/var/log/duelgo.log',
+    level=logging.INFO,
+    datefmt='%Y%m%d %H%M',
+    format='%(asctime)s : %(levelname)s %(name)s - %(message)s')
+
 log = logging.getLogger('[DuelGo]')
 
 def save_games_processed(games_processed):

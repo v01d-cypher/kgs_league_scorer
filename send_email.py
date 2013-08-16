@@ -3,7 +3,12 @@ import logging
 import smtplib
 from email.mime.text import MIMEText
 
-logging.basicConfig(filename='/var/log/duelgo.log', level=logging.INFO, datefmt='%Y%m%d %H%M', format='%(asctime)s : %(levelname)s %(name)s - %(message)s')
+logging.basicConfig(
+    filename='/var/log/duelgo.log',
+    level=logging.INFO,
+    datefmt='%Y%m%d %H%M',
+    format='%(asctime)s : %(levelname)s %(name)s - %(message)s')
+
 log = logging.getLogger('[Send-Mail]')
 
 def process_email(data):

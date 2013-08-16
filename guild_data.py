@@ -3,8 +3,14 @@ import logging
 import time
 import urllib.request
 
-logging.basicConfig(filename='/var/log/duelgo.log', level=logging.INFO, datefmt='%Y%m%d %H%M', format='%(asctime)s : %(levelname)s %(name)s - %(message)s')
+logging.basicConfig(
+    filename='/var/log/duelgo.log',
+    level=logging.INFO,
+    datefmt='%Y%m%d %H%M',
+    format='%(asctime)s : %(levelname)s %(name)s - %(message)s')
+
 log = logging.getLogger('[Guild-Data]')
+
 
 def _get_guild_data():
     guild_names_raw = urllib.request.urlopen('http://duelgo.webs.com/guilds')
