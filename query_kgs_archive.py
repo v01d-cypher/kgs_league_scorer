@@ -79,7 +79,7 @@ def calc_win_loss(win_loss, won=False):
         return '{}/{}'.format(win, loss + 1)
 
 
-def query_games(guild_members):
+def get_games_from_kgs(guild_members):
     games = []
     games_seen = load_games_seen()
 
@@ -243,7 +243,7 @@ def main():
     log.info('Start processing')
 
     guild_members = get_guild_members()
-    games = query_games(guild_members)
+    games = get_games_from_kgs(guild_members)
     processed_games = process_games(games, guild_members)
 
     if processed_games['valid'] or processed_games['same_guild']:
