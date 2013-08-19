@@ -11,13 +11,8 @@ import guild_data
 import send_email
 
 
-logging.basicConfig(
-    filename='/var/log/duelgo.log',
-    level=logging.INFO,
-    datefmt='%Y%m%d %H%M',
-    format='%(asctime)s : %(levelname)s %(name)s - %(message)s')
-
-log = logging.getLogger('[DuelGo]')
+def save_config(config):
+    yaml.dump(config, open('config.yaml', 'w', encoding='UTF-8'), default_flow_style=False)
 
 
 def load_games_seen():
@@ -42,7 +37,7 @@ def save_member_scores(guild_members):
     yaml.dump(yaml_data, open('member_scores.yaml', 'w', encoding='UTF-8'), default_flow_style=False)
 
 
-def get_member_data(member):
+def get_member_data(member, guild_members):
     if member in guild_members:
         return guild_members[member]
 
@@ -84,26 +79,19 @@ def calc_win_loss(win_loss, won=False):
         return '{}/{}'.format(win, loss + 1)
 
 
-def get_guild_members(guild):
-    members = []
-    for member in guild_members:
-        if member['Guild'] == guild:
-            members.append(member)
-    return members
-
-
 def query_games(guild_members):
     games = []
     games_seen = load_games_seen()
 
     for index, member in enumerate(guild_members):
         log.info('Query User #{}: {}'.format(index + 1, member))
-        # www.gokgs.com has a time limit between requests. Don't know how much time yet. 5 seconds seems to work for now.
+        # www.gokgs.com has a time limit between requests. Don't know how much time yet, but 5 seconds seems to work.
         time.sleep(5)
 
+        # We pass in our timezone as a cookie so that we're always processing against our time
         request = urllib.request.Request(
             'http://www.gokgs.com/gameArchives.jsp?user={}'.format(member),
-            headers={'Cookie': 'timeZone="Africa/Johannesburg"'})
+            headers={'Cookie': '{}'.format(config['timezone'])})
 
         games_raw = urllib.request.urlopen(request)
         games_soup = BeautifulSoup(games_raw.read())
@@ -168,7 +156,7 @@ def query_games(guild_members):
     return games
 
 
-def process_games(games):
+def process_games(games, guild_members):
     processed_games = {
         'valid': [],
         'same_guild': []
@@ -176,7 +164,7 @@ def process_games(games):
 
     for index, game in enumerate(games):
         log.info('Retrieve Game #{}: {}'.format(index + 1, game['Link']))
-        # www.gokgs.com has a time limit between requests. Don't know how much time yet. 5 seconds seems to work for now.
+        # www.gokgs.com has a time limit between requests. Don't know how much time yet, but 5 seconds seems to work.
         time.sleep(5)
 
         sgf_data = str(urllib.request.urlopen(game['Link']).read()).lower()
@@ -184,8 +172,8 @@ def process_games(games):
         if sgf_data.find('duelgo') > -1 or sgf_data.find('duel go') > -1:
             game['TableHeader'] = 'Game - {} vs. {}'.format(game['Winner'], game['Opponent'])
 
-            winner_data = get_member_data(game['winner_key'])
-            opponent_data = get_member_data(game['opponent_key'])
+            winner_data = get_member_data(game['winner_key'], guild_members)
+            opponent_data = get_member_data(game['opponent_key'], guild_members)
 
             game['WinnerGuild'] = winner_data['Guild']
             game['WinnerRank'] = winner_data['Rank']
@@ -224,18 +212,53 @@ def process_games(games):
     return processed_games
 
 
-log.info('Start processing')
+def get_guild_members():
+    guild_members = guild_data.get_guild_members()
+    for member, scores in load_member_scores().items():
+        if member in guild_members:
+            guild_members[member].update(scores)
+    return guild_members
 
-# Load guild members and update scores to what we last calculated
-guild_members = guild_data.get_guild_members()
-for member, scores in load_member_scores().items():
-    if member in guild_members:
-        guild_members[member].update(scores)
+
+def main():
+    log.info('Start processing')
+
+    guild_members = get_guild_members()
+    games = query_games(guild_members)
+    processed_games = process_games(games, guild_members)
+
+    if processed_games['valid'] or processed_games['same_guild']:
+        log.info('Sending email...')
+        send_email.process_email(processed_games)
 
 
-games = query_games(guild_members)
-processed_games = process_games(games)
+if __name__ == '__main__':
+    # Load guild members and update scores from yaml db.
+    # We assume our data is the most up to date.
+    #
+    # guild members should be a dictionary with the following format:
+    #
+    # guild_members {
+    #   member1: {  # make sure this is the member name lowercased to ease use as a key
+    #       'Name': 'MemBer1',
+    #       'Rank': '1d',
+    #       'Guild': 'Some Guild',
+    #       'Points': '0',
+    #       'Tournament Win/Loss': '0/0'},
+    #   othermember: {
+    #       'Name': 'OtherMember',
+    #       'Rank': '1k',
+    #       'Guild': 'Another Guild',
+    #       'Points': '1',
+    #       'Tournament Win/Loss': '1/0'}}
 
-if processed_games['valid'] or processed_games['same_guild']:
-    log.info('Sending email...')
-    send_email.process_email(processed_games)
+    config = yaml.load(open('config.yaml', 'rb'))
+
+    logging.basicConfig(
+        filename=config['logfile'],
+        level=logging.INFO,
+        datefmt='%Y%m%d %H%M',
+        format='%(asctime)s : %(levelname)s %(name)s - %(message)s')
+    log = logging.getLogger('[DuelGo]')
+
+    main()

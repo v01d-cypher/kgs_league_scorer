@@ -2,13 +2,16 @@ from bs4 import BeautifulSoup
 import logging
 import time
 import urllib.request
+import yaml
+
+
+config = yaml.load(open('config.yaml', 'rb'))
 
 logging.basicConfig(
-    filename='/var/log/duelgo.log',
+    filename=config['logfile'],
     level=logging.INFO,
     datefmt='%Y%m%d %H%M',
     format='%(asctime)s : %(levelname)s %(name)s - %(message)s')
-
 log = logging.getLogger('[Guild-Data]')
 
 

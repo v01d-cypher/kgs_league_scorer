@@ -1,19 +1,22 @@
+from email.mime.text import MIMEText
 import datetime
 import logging
 import smtplib
-from email.mime.text import MIMEText
+import yaml
+
+
+config = yaml.load(open('config.yaml', 'rb'))
 
 logging.basicConfig(
-    filename='/var/log/duelgo.log',
+    filename=config['logfile'],
     level=logging.INFO,
     datefmt='%Y%m%d %H%M',
     format='%(asctime)s : %(levelname)s %(name)s - %(message)s')
-
 log = logging.getLogger('[Send-Mail]')
 
 
 def process_email(games):
-    table_template = open('table_template.html', 'r').read()
+    table_template = open('games_template.html', 'r').read()
 
     valid_games_html = []
     for game in games['valid']:
@@ -29,21 +32,20 @@ def process_email(games):
 
 
 def connect():
-    gmail_user = 'username@gmail.com'
-    gmail_passwd = 'passsword'
-
-    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server = smtplib.SMTP(config['email_server'], config['email_port'])
     server.ehlo()
     server.starttls()
     server.ehlo()
-    server.login(gmail_user, gmail_passwd)
+    server.login(config['email_login_user'], config['email_login_password'])
     return server
 
 
 def send(data):
-    TO = 'to@somewhere.com'
-    FROM = 'username@gmail.com'
-    SUBJECT = 'KGS - DuelGo Results - {}'.format(datetime.datetime.now().strftime('%m/%d/%Y %I:%M %p'))
+    TO = config['email_to']
+    FROM = config['email_from']
+    # Add curent date and time to email subject.
+    # This helps prevent the emails from landing in a thread in the email client.
+    SUBJECT = config['email_subject'] + '- {}'.format(datetime.datetime.now().strftime('%m/%d/%Y %I:%M %p'))
 
     msg = MIMEText('\n'.join(data), 'html')
     msg['To'] = TO
