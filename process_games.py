@@ -88,7 +88,7 @@ def query_games(guild_members):
         # www.gokgs.com has a time limit between requests. Don't know how much time yet, but 5 seconds seems to work.
         time.sleep(5)
 
-        # We pass in our timezone as a cookie so that we're always processing against our time
+        # We pass in our timezone as a cookie so that we're always processing with our time
         request = urllib.request.Request(
             'http://www.gokgs.com/gameArchives.jsp?user={}'.format(member),
             headers={'Cookie': '{}'.format(config['timezone'])})
@@ -123,7 +123,7 @@ def query_games(guild_members):
                     date = datetime.datetime.strptime(tds[4].text.strip(), '%m/%d/%y %I:%M %p')
                     game_link = tds[0].a.get('href')
 
-                    # Get all games for previous day, that we haven't processed yet
+                    # Get all games that we haven't processed yet
                     if date.date() == datetime.datetime.now().date() - datetime.timedelta(1) and game_link not in games_seen:
                         log.info('\t{}'.format(game_link))
 
@@ -169,7 +169,7 @@ def process_games(games, guild_members):
 
         sgf_data = str(urllib.request.urlopen(game['Link']).read()).lower()
 
-        if sgf_data.find('duelgo') > -1 or sgf_data.find('duel go') > -1:
+        if re.search(config['game_key'].lower(), sgf_data.lower()):
             game['TableHeader'] = 'Game - {} vs. {}'.format(game['Winner'], game['Opponent'])
 
             winner_data = get_member_data(game['winner_key'], guild_members)
@@ -213,6 +213,25 @@ def process_games(games, guild_members):
 
 
 def get_guild_members():
+    # Load guild members and update scores from yaml db.
+    # We assume our data is the most up to date.
+    #
+    # guild members should be a dictionary with the following format:
+    #
+    # guild_members {
+    #   member1: {  # make sure this is the member name lowercased
+    #       'Name': 'MemBer1',
+    #       'Rank': '1d',
+    #       'Guild': 'Some Guild',
+    #       'Points': '0',
+    #       'Tournament Win/Loss': '0/0'},
+    #   othermember: {  # make sure this is the member name lowercased
+    #       'Name': 'OtherMember',
+    #       'Rank': '1k',
+    #       'Guild': 'Another Guild',
+    #       'Points': '1',
+    #       'Tournament Win/Loss': '1/0'}}
+
     guild_members = guild_data.get_guild_members()
     for member, scores in load_member_scores().items():
         if member in guild_members:
@@ -233,25 +252,6 @@ def main():
 
 
 if __name__ == '__main__':
-    # Load guild members and update scores from yaml db.
-    # We assume our data is the most up to date.
-    #
-    # guild members should be a dictionary with the following format:
-    #
-    # guild_members {
-    #   member1: {  # make sure this is the member name lowercased to ease use as a key
-    #       'Name': 'MemBer1',
-    #       'Rank': '1d',
-    #       'Guild': 'Some Guild',
-    #       'Points': '0',
-    #       'Tournament Win/Loss': '0/0'},
-    #   othermember: {
-    #       'Name': 'OtherMember',
-    #       'Rank': '1k',
-    #       'Guild': 'Another Guild',
-    #       'Points': '1',
-    #       'Tournament Win/Loss': '1/0'}}
-
     config = yaml.load(open('config.yaml', 'rb'))
 
     logging.basicConfig(
