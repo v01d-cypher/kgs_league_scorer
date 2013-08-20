@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import datetime
+import itertools
 import logging
 import pprint
 import re
@@ -84,6 +85,7 @@ def calc_win_loss(win_loss, won=False):
 def get_games_from_kgs(guild_members):
     games = []
     games_seen = load_games_seen()
+    games_seen_list = list(itertools.chain(*games_seen.values()))
     datenow = datetime.datetime.now()
 
     for index, member in enumerate(guild_members):
@@ -127,11 +129,15 @@ def get_games_from_kgs(guild_members):
                     date_played = datetime.datetime.strptime(tds[4].text.strip(), '%m/%d/%y %I:%M %p')
 
                     # Get all games that we haven't processed yet
-                    if (game_link not in games_seen.setdefault(datenow.date(), []) and
+
+                    if (game_link not in games_seen_list and
                         (date_played.date() == datenow.date() or
                          date_played.date() == datenow.date() - datetime.timedelta(1))):
 
                         log.info('\t{}'.format(game_link))
+
+                        games_seen_list.append(game_link)
+                        games_seen.setdefault(datenow.date(), []).append(game_link)
 
                         winner_colour = 'B'
                         opponent_colour = 'W'
@@ -149,12 +155,11 @@ def get_games_from_kgs(guild_members):
                             'opponent_key': players[opponent_colour]['key'],
                             'Opponent': players[opponent_colour]['name'],
                             'OpponentColour': players[opponent_colour]['colour'],
-                            'DatePlayed': date_played.date().strftime(config['dateformat']),
+                            'DatePlayed': date_played.date().strftime('{} {}'.format(config['dateformat'], config['timeformat'])),
                             'Result': result,
                         }
 
                         games.append(game_data)
-                        games_seen[datenow].append(game_link)
 
     save_games_seen(games_seen, datenow)
 
