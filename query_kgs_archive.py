@@ -11,15 +11,16 @@ import guild_data
 import send_email
 
 
-def save_config(config):
-    yaml.dump(config, open('config.yaml', 'w', encoding='UTF-8'), default_flow_style=False)
-
-
 def load_games_seen():
     return yaml.load(open('games_seen.yaml', 'rb'))
 
 
-def save_games_seen(games_seen):
+def save_games_seen(games_seen, datenow):
+    # We remove games older than 2 days.
+    for key in list(games_seen.keys()):
+        if key < datenow.date() - datetime.timedelta(1):
+            del games_seen[key]
+
     yaml.dump(games_seen, open('games_seen.yaml', 'w', encoding='UTF-8'), default_flow_style=False)
 
 
@@ -63,6 +64,7 @@ def calc_points(points, won=False):
 
 def calc_win_loss(win_loss, won=False):
     win, loss = win_loss.split('/')
+
     try:
         win = int(win)
     except:
@@ -82,6 +84,7 @@ def calc_win_loss(win_loss, won=False):
 def get_games_from_kgs(guild_members):
     games = []
     games_seen = load_games_seen()
+    datenow = datetime.datetime.now()
 
     for index, member in enumerate(guild_members):
         log.info('Query User #{}: {}'.format(index + 1, member))
@@ -120,11 +123,14 @@ def get_games_from_kgs(guild_members):
 
                 # This will also work where user played no games as game_viewable will be a 'Year' from the other table
                 if game_viewable == 'Yes' and game_type in ['Free', 'Ranked'] and game_setup.find('19×19') > -1:
-                    date = datetime.datetime.strptime(tds[4].text.strip(), '%m/%d/%y %I:%M %p')
                     game_link = tds[0].a.get('href')
+                    date_played = datetime.datetime.strptime(tds[4].text.strip(), '%m/%d/%y %I:%M %p')
 
                     # Get all games that we haven't processed yet
-                    if date.date() == datetime.datetime.now().date() - datetime.timedelta(1) and game_link not in games_seen:
+                    if (game_link not in games_seen.setdefault(datenow.date(), []) and
+                        (date_played.date() == datenow.date() or
+                         date_played.date() == datenow.date() - datetime.timedelta(1))):
+
                         log.info('\t{}'.format(game_link))
 
                         winner_colour = 'B'
@@ -148,10 +154,11 @@ def get_games_from_kgs(guild_members):
                         }
 
                         games.append(game_data)
-                        games_seen.append(game_link)
+                        games_seen[datenow].append(game_link)
+
+    save_games_seen(games_seen, datenow)
 
     log.info('Games found: ' + pprint.pformat(games))
-    save_games_seen(games_seen)
 
     return games
 
