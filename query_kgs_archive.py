@@ -88,7 +88,7 @@ def get_games_from_kgs(guild_members):
         # www.gokgs.com has a time limit between requests. Don't know how much time yet, but 5 seconds seems to work.
         time.sleep(5)
 
-        # We pass in our timezone as a cookie so that we're always processing with our time
+        # We pass in our timezone as a cookie so that we're always processing against our time
         request = urllib.request.Request(
             'http://www.gokgs.com/gameArchives.jsp?user={}'.format(member),
             headers={'Cookie': '{}'.format(config['timezone'])})
@@ -102,7 +102,7 @@ def get_games_from_kgs(guild_members):
             white_player = re.sub(r'(.*)\[.*', r'\1', tds[1].text).strip().lower()
             black_player = re.sub(r'(.*)\[.*', r'\1', tds[2].text).strip().lower()
 
-            # Only bother doing anything with the game data if both the players are members of known guilds
+            # Only bother doing anything with the game data if both players are members of known guilds
             if white_player in guild_members and black_player in guild_members:
                 players = {
                     'W': {
