@@ -143,7 +143,7 @@ def get_games_from_kgs(guild_members):
                             'opponent_key': players[opponent_colour]['key'],
                             'Opponent': players[opponent_colour]['name'],
                             'OpponentColour': players[opponent_colour]['colour'],
-                            'DatePlayed': date.date().strftime('%m/%d/%Y'),
+                            'DatePlayed': date_played.date().strftime(config['dateformat']),
                             'Result': result,
                         }
 

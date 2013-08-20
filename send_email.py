@@ -45,7 +45,8 @@ def send(data):
     FROM = config['email_from']
     # Add curent date and time to email subject.
     # This helps prevent the emails from landing in a thread in the email client.
-    SUBJECT = config['email_subject'] + '- {}'.format(datetime.datetime.now().strftime('%m/%d/%Y %I:%M %p'))
+    SUBJECT = (config['email_subject'] +
+               '- {}'.format(datetime.datetime.now().strftime('{} {}'.format(config['dateformat'], config['timeformat']))))
 
     msg = MIMEText('\n'.join(data), 'html')
     msg['To'] = TO
