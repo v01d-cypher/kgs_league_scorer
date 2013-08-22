@@ -6,7 +6,6 @@ email_subject: KGS - Tournament Results
 email_server: smtp.gmail.com
 email_port: 587
 logfile: /var/log/kgs_tournament.log
-timezone: timeZone="Africa/Johannesburg"
 game_key: 'searches_for_this_word_in_game_comments'
 dateformat: '%m/%d/%Y'
 timeformat: '%I:%M %p'
