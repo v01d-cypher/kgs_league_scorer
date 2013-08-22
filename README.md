@@ -1,13 +1,17 @@
 Introduction
-============
+------------
 
 This is a collection of scripts to facilitate the automation of scoring games played on KGS for Leagues/Tournaments.
 
 The main script queries KGS for games played by League members and downloads them to parse for the _keyword_ in the comments that identifies it as a league/tournament game.
 
+Requirements
+------------
 
-Script Breakdown
-================
+The script requires the **YAML** and **BeautifulSoup4** Python libraries.
+
+Scripts Breakdown
+-----------------
 
 | Script | Description |
 | ------ | ----------- |
@@ -20,6 +24,6 @@ Script Breakdown
 | member_scores.yaml | Specific to the League I wrote this for on KGS (this will become a proper database with all member data) |
 
 Future Plans
-============
+------------
 
-I'm currently working on a web application that will allow the reqistering of Leagues, Guilds and members. The _keyword_ will be configurable and the entire scoring process will be handled automatically by the system. The current query_kgs_archive.py script will form part of the backend.
+I'm currently working on a web application that will allow the reqistering of Leagues, Guilds and members. The _keyword_ will be configurable and the entire scoring process will be handled automatically by the system. The query_kgs_archive.py script will form part of the backend.
