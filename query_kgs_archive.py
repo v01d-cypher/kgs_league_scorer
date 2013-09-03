@@ -103,6 +103,7 @@ def get_games_from_kgs(guild_members):
                 .format(member, previous_month.year, previous_month.month))
 
         for query_url in kgs_query_urls:
+            log.info('KGS archive URL : {}'.format(query_url))
             # www.gokgs.com has a time limit between requests. Don't know how much time yet, but 5 seconds seems to work.
             time.sleep(5)
 
