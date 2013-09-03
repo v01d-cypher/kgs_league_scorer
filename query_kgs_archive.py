@@ -282,6 +282,6 @@ if __name__ == '__main__':
         level=logging.INFO,
         datefmt='%Y%m%d %H%M',
         format='%(asctime)s : %(levelname)s %(name)s - %(message)s')
-    log = logging.getLogger('[DuelGo]')
+    log = logging.getLogger('[KGS-Archive]')
 
     main()
