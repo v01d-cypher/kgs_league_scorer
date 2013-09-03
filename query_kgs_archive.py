@@ -130,10 +130,7 @@ def get_games_from_kgs(guild_members):
 
                         # Get all games that we haven't processed yet
 
-                        if (game_link not in games_seen_list and
-                            (date_played.date() == datenow.date() or
-                             date_played.date() == datenow.date() - datetime.timedelta(1))):
-
+                        if game_link not in games_seen_list and date_played >= datenow - datetime.timedelta(1):
                             log.info('\t{}'.format(game_link))
 
                             games_seen_list.append(game_link)
