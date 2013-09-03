@@ -93,7 +93,12 @@ def get_games_from_kgs(guild_members):
         # www.gokgs.com has a time limit between requests. Don't know how much time yet, but 5 seconds seems to work.
         time.sleep(5)
 
-        games_raw = urllib.request.urlopen('http://www.gokgs.com/gameArchives.jsp?user={}'.format(member))
+        # We pass in our timezone as a cookie so that we're always processing against our time
+        request = urllib.request.Request(
+            'http://www.gokgs.com/gameArchives.jsp?user={}'.format(member),
+            headers={'Cookie': '{}'.format(config['timezone'])})
+
+        games_raw = urllib.request.urlopen(request)
         games_soup = BeautifulSoup(games_raw.read())
 
         for game in games_soup.table.find_all('tr')[1:]:
