@@ -83,6 +83,7 @@ def calc_win_loss(win_loss, won=False):
 
 
 def get_games_from_kgs(guild_members):
+    kgs_archive_url = 'http://www.gokgs.com/gameArchives.jsp'
     games = []
     games_seen = load_games_seen()
     games_seen_list = list(itertools.chain(*games_seen.values()))
@@ -90,73 +91,85 @@ def get_games_from_kgs(guild_members):
 
     for index, member in enumerate(guild_members):
         log.info('Query User #{}: {}'.format(index + 1, member))
-        # www.gokgs.com has a time limit between requests. Don't know how much time yet, but 5 seconds seems to work.
-        time.sleep(5)
 
-        # We pass in our timezone as a cookie so that we're always processing against our time
-        request = urllib.request.Request(
-            'http://www.gokgs.com/gameArchives.jsp?user={}'.format(member),
-            headers={'Cookie': '{}'.format(config['timezone'])})
+        kgs_query_urls = [(kgs_archive_url + '?user={}').format(member)]
 
-        games_raw = urllib.request.urlopen(request)
-        games_soup = BeautifulSoup(games_raw.read())
+        # If it's the 1st of the month, KGS archive shows games for the new month.
+        # We must modify the url to query games that we haven't processed yet for the last day of the previous month.
+        if datenow.day == 1:
+            previous_month = datenow - datetime.timedelta(1)
+            kgs_query_urls.append(
+                (kgs_archive_url + '?user={}&year={}&month={}')
+                .format(member, previous_month.year, previous_month.month))
 
-        for game in games_soup.table.find_all('tr')[1:]:
-            tds = game.find_all('td')
-            game_viewable = tds[0].text
+        for query_url in kgs_query_urls:
+            # www.gokgs.com has a time limit between requests. Don't know how much time yet, but 5 seconds seems to work.
+            time.sleep(5)
 
-            if game_viewable == 'Yes':
-                white_player = re.sub(r'(.*)\[.*', r'\1', tds[1].text).strip().lower()
-                black_player = re.sub(r'(.*)\[.*', r'\1', tds[2].text).strip().lower()
+            # We pass in our timezone as a cookie so that we're always processing against our time
+            request = urllib.request.Request(
+                query_url,
+                headers={'Cookie': '{}'.format(config['timezone'])})
 
-                # Only bother doing anything with the game data if both players are members of known guilds
-                if white_player in guild_members and black_player in guild_members:
-                    players = {
-                        'W': {
-                            'key': white_player,
-                            'name': guild_members[white_player]['Name'],
-                            'colour': 'White'},
-                        'B': {
-                            'key': black_player,
-                            'name': guild_members[black_player]['Name'],
-                            'colour': 'Black'}}
+            games_raw = urllib.request.urlopen(request)
+            games_soup = BeautifulSoup(games_raw.read())
 
-                    game_setup = tds[3].text.strip()
-                    game_type = tds[-2].text
+            for game in games_soup.table.find_all('tr')[1:]:
+                tds = game.find_all('td')
+                game_viewable = tds[0].text
 
-                    if game_type in ['Free', 'Ranked'] and game_setup.find('19×19') > -1:
-                        game_link = tds[0].a.get('href')
-                        date_played = datetime.datetime.strptime(tds[4].text.strip(), '%m/%d/%y %I:%M %p')
+                if game_viewable == 'Yes':
+                    white_player = re.sub(r'(.*)\[.*', r'\1', tds[1].text).strip().lower()
+                    black_player = re.sub(r'(.*)\[.*', r'\1', tds[2].text).strip().lower()
 
-                        # Get all games that we haven't processed yet
+                    # Only bother doing anything with the game data if both players are members of known guilds
+                    if white_player in guild_members and black_player in guild_members:
+                        players = {
+                            'W': {
+                                'key': white_player,
+                                'name': guild_members[white_player]['Name'],
+                                'colour': 'White'},
+                            'B': {
+                                'key': black_player,
+                                'name': guild_members[black_player]['Name'],
+                                'colour': 'Black'}}
 
-                        if game_link not in games_seen_list and date_played >= datenow - datetime.timedelta(1):
-                            log.info('\t{}'.format(game_link))
+                        game_setup = tds[3].text.strip()
+                        game_type = tds[-2].text
 
-                            games_seen_list.append(game_link)
-                            games_seen.setdefault(datenow.date(), []).append(game_link)
+                        if game_type in ['Free', 'Ranked'] and game_setup.find('19×19') > -1:
+                            game_link = tds[0].a.get('href')
+                            date_played = datetime.datetime.strptime(tds[4].text.strip(), '%m/%d/%y %I:%M %p')
 
-                            winner_colour = 'B'
-                            opponent_colour = 'W'
+                            # Get all games that we haven't processed yet
 
-                            result = tds[6].text.strip()
+                            if game_link not in games_seen_list and date_played >= datenow - datetime.timedelta(1):
+                                log.info('\t{}'.format(game_link))
 
-                            if result[0] != winner_colour:
-                                winner_colour, opponent_colour = opponent_colour, winner_colour
+                                games_seen_list.append(game_link)
+                                games_seen.setdefault(datenow.date(), []).append(game_link)
 
-                            game_data = {
-                                'Link': game_link,
-                                'winner_key': players[winner_colour]['key'],
-                                'Winner': players[winner_colour]['name'],
-                                'WinnerColour': players[winner_colour]['colour'],
-                                'opponent_key': players[opponent_colour]['key'],
-                                'Opponent': players[opponent_colour]['name'],
-                                'OpponentColour': players[opponent_colour]['colour'],
-                                'DatePlayed': date_played.strftime('{} {}'.format(config['dateformat'], config['timeformat'])),
-                                'Result': result,
-                            }
+                                winner_colour = 'B'
+                                opponent_colour = 'W'
 
-                            games.append(game_data)
+                                result = tds[6].text.strip()
+
+                                if result[0] != winner_colour:
+                                    winner_colour, opponent_colour = opponent_colour, winner_colour
+
+                                game_data = {
+                                    'Link': game_link,
+                                    'winner_key': players[winner_colour]['key'],
+                                    'Winner': players[winner_colour]['name'],
+                                    'WinnerColour': players[winner_colour]['colour'],
+                                    'opponent_key': players[opponent_colour]['key'],
+                                    'Opponent': players[opponent_colour]['name'],
+                                    'OpponentColour': players[opponent_colour]['colour'],
+                                    'DatePlayed': date_played.strftime('{} {}'.format(config['dateformat'], config['timeformat'])),
+                                    'Result': result,
+                                }
+
+                                games.append(game_data)
 
     save_games_seen(games_seen, datenow)
 
