@@ -103,63 +103,63 @@ def get_games_from_kgs(guild_members):
 
         for game in games_soup.table.find_all('tr')[1:]:
             tds = game.find_all('td')
+            game_viewable = tds[0].text
 
-            white_player = re.sub(r'(.*)\[.*', r'\1', tds[1].text).strip().lower()
-            black_player = re.sub(r'(.*)\[.*', r'\1', tds[2].text).strip().lower()
+            if game_viewable == 'Yes':
+                white_player = re.sub(r'(.*)\[.*', r'\1', tds[1].text).strip().lower()
+                black_player = re.sub(r'(.*)\[.*', r'\1', tds[2].text).strip().lower()
 
-            # Only bother doing anything with the game data if both players are members of known guilds
-            if white_player in guild_members and black_player in guild_members:
-                players = {
-                    'W': {
-                        'key': white_player,
-                        'name': guild_members[white_player]['Name'],
-                        'colour': 'White'},
-                    'B': {
-                        'key': black_player,
-                        'name': guild_members[black_player]['Name'],
-                        'colour': 'Black'}}
+                # Only bother doing anything with the game data if both players are members of known guilds
+                if white_player in guild_members and black_player in guild_members:
+                    players = {
+                        'W': {
+                            'key': white_player,
+                            'name': guild_members[white_player]['Name'],
+                            'colour': 'White'},
+                        'B': {
+                            'key': black_player,
+                            'name': guild_members[black_player]['Name'],
+                            'colour': 'Black'}}
 
-                game_viewable = tds[0].text
-                game_setup = tds[3].text.strip()
-                game_type = tds[-2].text
+                    game_setup = tds[3].text.strip()
+                    game_type = tds[-2].text
 
-                # This will also work where user played no games as game_viewable will be a 'Year' from the other table
-                if game_viewable == 'Yes' and game_type in ['Free', 'Ranked'] and game_setup.find('19×19') > -1:
-                    game_link = tds[0].a.get('href')
-                    date_played = datetime.datetime.strptime(tds[4].text.strip(), '%m/%d/%y %I:%M %p')
+                    if game_type in ['Free', 'Ranked'] and game_setup.find('19×19') > -1:
+                        game_link = tds[0].a.get('href')
+                        date_played = datetime.datetime.strptime(tds[4].text.strip(), '%m/%d/%y %I:%M %p')
 
-                    # Get all games that we haven't processed yet
+                        # Get all games that we haven't processed yet
 
-                    if (game_link not in games_seen_list and
-                        (date_played.date() == datenow.date() or
-                         date_played.date() == datenow.date() - datetime.timedelta(1))):
+                        if (game_link not in games_seen_list and
+                            (date_played.date() == datenow.date() or
+                             date_played.date() == datenow.date() - datetime.timedelta(1))):
 
-                        log.info('\t{}'.format(game_link))
+                            log.info('\t{}'.format(game_link))
 
-                        games_seen_list.append(game_link)
-                        games_seen.setdefault(datenow.date(), []).append(game_link)
+                            games_seen_list.append(game_link)
+                            games_seen.setdefault(datenow.date(), []).append(game_link)
 
-                        winner_colour = 'B'
-                        opponent_colour = 'W'
+                            winner_colour = 'B'
+                            opponent_colour = 'W'
 
-                        result = tds[6].text.strip()
+                            result = tds[6].text.strip()
 
-                        if result[0] != winner_colour:
-                            winner_colour, opponent_colour = opponent_colour, winner_colour
+                            if result[0] != winner_colour:
+                                winner_colour, opponent_colour = opponent_colour, winner_colour
 
-                        game_data = {
-                            'Link': game_link,
-                            'winner_key': players[winner_colour]['key'],
-                            'Winner': players[winner_colour]['name'],
-                            'WinnerColour': players[winner_colour]['colour'],
-                            'opponent_key': players[opponent_colour]['key'],
-                            'Opponent': players[opponent_colour]['name'],
-                            'OpponentColour': players[opponent_colour]['colour'],
-                            'DatePlayed': date_played.strftime('{} {}'.format(config['dateformat'], config['timeformat'])),
-                            'Result': result,
-                        }
+                            game_data = {
+                                'Link': game_link,
+                                'winner_key': players[winner_colour]['key'],
+                                'Winner': players[winner_colour]['name'],
+                                'WinnerColour': players[winner_colour]['colour'],
+                                'opponent_key': players[opponent_colour]['key'],
+                                'Opponent': players[opponent_colour]['name'],
+                                'OpponentColour': players[opponent_colour]['colour'],
+                                'DatePlayed': date_played.strftime('{} {}'.format(config['dateformat'], config['timeformat'])),
+                                'Result': result,
+                            }
 
-                        games.append(game_data)
+                            games.append(game_data)
 
     save_games_seen(games_seen, datenow)
 
